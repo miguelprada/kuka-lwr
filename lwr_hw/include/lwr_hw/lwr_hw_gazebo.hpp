@@ -19,7 +19,7 @@ class LWRHWGazebo : public LWRHW
 {
 public:
 
-  LWRHWGazebo() : LWRHW() {}
+  LWRHWGazebo() : LWRHW(), parent_set_(false) {}
   ~LWRHWGazebo() {}
 
   void setParentModel(gazebo::physics::ModelPtr parent_model){parent_model_ = parent_model; parent_set_ = true;};
@@ -116,7 +116,7 @@ private:
   // Gazebo stuff
   std::vector<gazebo::physics::JointPtr> sim_joints_;
   gazebo::physics::ModelPtr parent_model_;
-  bool parent_set_ = false;
+  bool parent_set_;
 
 };
 

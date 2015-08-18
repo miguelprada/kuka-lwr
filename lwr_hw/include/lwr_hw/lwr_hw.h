@@ -34,7 +34,7 @@ class LWRHW : public hardware_interface::RobotHW
 {
 public:
 
-  LWRHW() {}
+  LWRHW() : n_joints_(7) {}
   virtual ~LWRHW() {}
 
   void create(std::string name, std::string urdf_string);
@@ -92,7 +92,7 @@ public:
   void enforceLimits(ros::Duration period);
 
   // configuration
-  int n_joints_ = 7; // safe magic number, the kuka lwr 4+ has 7 joints
+  int n_joints_; // safe magic number, the kuka lwr 4+ has 7 joints
   std::vector<std::string> joint_names_;
 
   // limits

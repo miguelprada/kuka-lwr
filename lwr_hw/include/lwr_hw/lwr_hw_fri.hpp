@@ -23,7 +23,7 @@ class LWRHWFRI : public LWRHW
 
 public:
 
-  LWRHWFRI() : LWRHW() {}
+  LWRHWFRI() : LWRHW(), port_set_(false), ip_set_(false), stopKRCComm_(false) {}
   ~LWRHWFRI() { stopKRCComm_ = true; KRCCommThread_.get()->join();}
 
   void setPort(int port){port_ = port; port_set_ = true;};
@@ -200,9 +200,9 @@ private:
 
   // Parameters
   int port_;
-  bool port_set_ = false;
+  bool port_set_;
   std::string hintToRemoteHost_;
-  bool ip_set_ = false;
+  bool ip_set_;
 
   // low-level interface
   boost::shared_ptr<friRemote> device_;
@@ -212,7 +212,7 @@ private:
   FRI_CTRL lastCtrlScheme_;
 
   boost::shared_ptr<std::thread> KRCCommThread_;
-  bool stopKRCComm_ = false;
+  bool stopKRCComm_;
   void KRCCommThreadCallback()
   {
     while(!stopKRCComm_)

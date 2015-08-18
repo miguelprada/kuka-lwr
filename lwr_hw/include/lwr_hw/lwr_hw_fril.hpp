@@ -18,7 +18,7 @@ class LWRHWFRIL : public LWRHW
 
 public:
 
-  LWRHWFRIL() : LWRHW() {}
+  LWRHWFRIL() : LWRHW(), file_set_(false), ResultValue(0) {}
   ~LWRHWFRIL() {}
 
   void stop(){return;};
@@ -221,11 +221,11 @@ private:
 
   // Parameters
   std::string init_file_;
-  bool file_set_ = false;
+  bool file_set_;
 
   // low-level interface
   boost::shared_ptr<FastResearchInterface> device_;
-  int ResultValue = 0;
+  int ResultValue;
 };
 
 }
