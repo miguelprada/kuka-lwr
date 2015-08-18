@@ -22,7 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
 )
 
-add_definitions (-fpermissive -std=c++11)
+add_definitions (-fpermissive -std=c++0x)
 
 catkin_package(
   CATKIN_DEPENDS
