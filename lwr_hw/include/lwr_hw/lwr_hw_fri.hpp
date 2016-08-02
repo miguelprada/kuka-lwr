@@ -144,17 +144,20 @@ public:
     // If any of the controllers in the start list works on a velocity interface, the switch can't be done.
     for ( std::list<hardware_interface::ControllerInfo>::const_iterator it = start_list.begin(); it != start_list.end(); ++it )
     {
-      if( it->hardware_interface.compare( std::string("hardware_interface::PositionJointInterface") ) == 0 )
+      for( std::vector<hardware_interface::InterfaceResources>::const_iterator res_it = it->claimed_resources.begin(); res_it != it->claimed_resources.end(); ++res_it )
       {
-        std::cout << "Request to switch to hardware_interface::PositionJointInterface (JOINT_POSITION)" << std::endl;
-        desired_strategy = JOINT_POSITION;
-        break;
-      }
-      else if( it->hardware_interface.compare( std::string("hardware_interface::EffortJointInterface") ) == 0 )
-      {
-        std::cout << "Request to switch to hardware_interface::EffortJointInterface (JOINT_EFFORT)" << std::endl;
-        desired_strategy = JOINT_EFFORT;
-        break;
+        if( res_it->hardware_interface.compare( std::string("hardware_interface::PositionJointInterface") ) == 0 )
+        {
+          std::cout << "Request to switch to hardware_interface::PositionJointInterface (JOINT_POSITION)" << std::endl;
+          desired_strategy = JOINT_POSITION;
+          break;
+        }
+        else if( res_it->hardware_interface.compare( std::string("hardware_interface::EffortJointInterface") ) == 0 )
+        {
+          std::cout << "Request to switch to hardware_interface::EffortJointInterface (JOINT_EFFORT)" << std::endl;
+          desired_strategy = JOINT_EFFORT;
+          break;
+        }
       }
     }
 
