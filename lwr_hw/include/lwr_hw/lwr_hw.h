@@ -12,6 +12,7 @@
 #include <hardware_interface/robot_hw.h>
 #include <hardware_interface/joint_state_interface.h>
 #include <hardware_interface/joint_command_interface.h>
+#include <hardware_interface/joint_impedance_interface.h>
 #include <transmission_interface/transmission_info.h>
 #include <transmission_interface/transmission_parser.h>
 #include <joint_limits_interface/joint_limits.h>
@@ -62,19 +63,20 @@ public:
   virtual bool init() = 0;
   virtual void read(ros::Time time, ros::Duration period) = 0;
   virtual void write(ros::Time time, ros::Duration period) = 0;
+  virtual void setControlStrategy(ControlStrategy strategy) = 0;
 
   // get/set control method
-  void setControlStrategy( ControlStrategy strategy){current_strategy_ = strategy;};
   ControlStrategy getControlStrategy(){ return current_strategy_;};
 
   // Hardware interfaces
   hardware_interface::JointStateInterface state_interface_;
   hardware_interface::EffortJointInterface effort_interface_;
   hardware_interface::PositionJointInterface position_interface_;
-  // hardware_interface::StiffnessJointInterface stiffness_interface_; // ToDo
-  // hardware_interface::ImpedanceointInterface impedance_interface_; // ToDo
+  hardware_interface::StiffnessJointInterface stiffness_interface_;
+  hardware_interface::DampingJointInterface damping_interface_;
 
   ControlStrategy current_strategy_;
+  ControlStrategy next_strategy_;
 
   // joint limits interfaces
   joint_limits_interface::EffortJointSaturationInterface     ej_sat_interface_;
@@ -84,9 +86,7 @@ public:
   joint_limits_interface::PositionJointSaturationInterface   pj_sat_interface_;
   joint_limits_interface::PositionJointSoftLimitsInterface   pj_limits_interface_;
   joint_limits_interface::PositionJointSaturationInterface   sj_sat_interface_;
-  joint_limits_interface::PositionJointSoftLimitsInterface   sj_limits_interface_;
   joint_limits_interface::PositionJointSaturationInterface   dj_sat_interface_;
-  joint_limits_interface::PositionJointSoftLimitsInterface   dj_limits_interface_;
 
   // Before write, you can use this function to enforce limits for all values
   void enforceLimits(ros::Duration period);
@@ -156,9 +156,11 @@ private:
                    const hardware_interface::JointHandle& joint_handle_position,
                    const hardware_interface::JointHandle& joint_handle_velocity,
                    const hardware_interface::JointHandle& joint_handle_stiffness,
+                   const hardware_interface::JointHandle& joint_handle_damping,
                    const urdf::Model *const urdf_model,
                    double *const lower_limit, double *const upper_limit,
                    double *const lower_limit_stiffness, double *const upper_limit_stiffness,
+                   double *const lower_limit_damping, double *const upper_limit_damping,
                    double *const effort_limit);
 
 }; // class

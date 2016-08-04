@@ -111,6 +111,11 @@ public:
     }
   }
 
+  void setControlStrategy(ControlStrategy strategy)
+  {
+    current_strategy_ = strategy;
+  }
+
 private:
 
   // Gazebo stuff

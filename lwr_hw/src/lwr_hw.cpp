@@ -1,5 +1,7 @@
 #include "lwr_hw/lwr_hw.h"
 
+#include <set>
+
 namespace lwr_hw
 {
   void LWRHW::create(std::string name, std::string urdf_string)
@@ -38,6 +40,8 @@ namespace lwr_hw
     joint_upper_limits_.resize(n_joints_);
     joint_lower_limits_stiffness_.resize(n_joints_);
     joint_upper_limits_stiffness_.resize(n_joints_);
+    joint_lower_limits_damping_.resize(n_joints_);
+    joint_upper_limits_damping_.resize(n_joints_);
     joint_effort_limits_.resize(n_joints_);
 
     // RESET VARIABLES
@@ -80,8 +84,8 @@ namespace lwr_hw
       joint_position_command_[j] = 0.0;
       joint_velocity_command_[j] = 0.0;
       joint_effort_command_[j] = 0.0;
-      joint_stiffness_command_[j] = 2500.0;
-      joint_damping_command_[j] = 0.0;
+      joint_stiffness_command_[j] = 2000.0;
+      joint_damping_command_[j] = 0.7;
     }
 
     current_strategy_ = JOINT_POSITION;
@@ -150,14 +154,16 @@ namespace lwr_hw
                                                        &joint_position_command_[j]);
       position_interface_.registerHandle(joint_handle_position);
 
-      // the stiffness is not actually a different joint, so the state handle is only used for handle
       hardware_interface::JointHandle joint_handle_stiffness;
-      joint_handle_stiffness = hardware_interface::JointHandle(hardware_interface::JointStateHandle(
-                                                                   joint_names_[j]+std::string("_stiffness"),
-                                                                   &joint_stiffness_[j], &joint_stiffness_[j], &joint_stiffness_[j]),
+      joint_handle_stiffness = hardware_interface::JointHandle(state_interface_.getHandle(joint_names_[j]),
                                                        &joint_stiffness_command_[j]);
-      position_interface_.registerHandle(joint_handle_stiffness);
-   
+      stiffness_interface_.registerHandle(joint_handle_stiffness);
+
+      hardware_interface::JointHandle joint_handle_damping;
+      joint_handle_damping = hardware_interface::JointHandle(state_interface_.getHandle(joint_names_[j]),
+                                                       &joint_damping_command_[j]);
+      damping_interface_.registerHandle(joint_handle_damping);
+
      // velocity command handle, recall it is fake, there is no actual velocity interface
       hardware_interface::JointHandle joint_handle_velocity;
       joint_handle_velocity = hardware_interface::JointHandle(state_interface_.getHandle(joint_names_[j]),
@@ -168,10 +174,13 @@ namespace lwr_hw
                           joint_handle_position,
                           joint_handle_velocity,
                           joint_handle_stiffness,
+                          joint_handle_damping,
                           urdf_model, 
                           &joint_lower_limits_[j], &joint_upper_limits_[j],
                           &joint_lower_limits_stiffness_[j],
                           &joint_upper_limits_stiffness_[j],
+                          &joint_lower_limits_damping_[j],
+                          &joint_upper_limits_damping_[j],
                           &joint_effort_limits_[j]);
     }
 
@@ -179,6 +188,8 @@ namespace lwr_hw
     registerInterface(&state_interface_);
     registerInterface(&effort_interface_);
     registerInterface(&position_interface_);
+    registerInterface(&stiffness_interface_);
+    registerInterface(&damping_interface_);
   }
 
   // Register the limits of the joint specified by joint_name and\ joint_handle. The limits are
@@ -189,35 +200,34 @@ namespace lwr_hw
                            const hardware_interface::JointHandle& joint_handle_position,
                            const hardware_interface::JointHandle& joint_handle_velocity,
                            const hardware_interface::JointHandle& joint_handle_stiffness,
+                           const hardware_interface::JointHandle& joint_handle_damping,
                            const urdf::Model *const urdf_model,
                            double *const lower_limit, double *const upper_limit, 
                            double *const lower_limit_stiffness, double *const upper_limit_stiffness,
+                           double *const lower_limit_damping, double *const upper_limit_damping,
                            double *const effort_limit)
   {
     *lower_limit = -std::numeric_limits<double>::max();
     *upper_limit = std::numeric_limits<double>::max();
     *lower_limit_stiffness = -std::numeric_limits<double>::max();
     *upper_limit_stiffness = std::numeric_limits<double>::max();
+    *lower_limit_damping= -std::numeric_limits<double>::max();
+    *upper_limit_damping= std::numeric_limits<double>::max();
     *effort_limit = std::numeric_limits<double>::max();
 
     joint_limits_interface::JointLimits limits;
-    joint_limits_interface::JointLimits limits_stiffness;
     bool has_limits = false;
-    bool has_limits_stiffness = false;
     joint_limits_interface::SoftJointLimits soft_limits;
     bool has_soft_limits = false;
 
     if (urdf_model != NULL)
     {
       const boost::shared_ptr<const urdf::Joint> urdf_joint = urdf_model->getJoint(joint_name);
-      const boost::shared_ptr<const urdf::Joint> urdf_joint_sitffness = urdf_model->getJoint(joint_name + std::string("_stiffness"));
       if (urdf_joint != NULL)
       {
         // Get limits from the URDF file.
         if (joint_limits_interface::getJointLimits(urdf_joint, limits))
           has_limits = true;
-        if (joint_limits_interface::getJointLimits(urdf_joint_sitffness, limits_stiffness))
-          has_limits_stiffness = true;
         if (joint_limits_interface::getSoftJointLimits(urdf_joint, soft_limits))
           has_soft_limits = true;
       }
@@ -254,17 +264,26 @@ namespace lwr_hw
       vj_sat_interface_.registerHandle(sat_handle_velocity);
     }
 
-    if (!has_limits_stiffness)
-      return;
+    *lower_limit_stiffness = 0.0;
+    *upper_limit_stiffness = 2000.0;
+    *lower_limit_damping = 0.0;
+    *upper_limit_damping = 1.0;
 
-    if (limits_stiffness.has_position_limits)
-    {
-      *lower_limit_stiffness = limits_stiffness.min_position;
-      *upper_limit_stiffness = limits_stiffness.max_position;
-    }
+    joint_limits_interface::JointLimits stiffness_limits;
+    stiffness_limits.has_position_limits = true;
+    stiffness_limits.min_position = *lower_limit_stiffness;
+    stiffness_limits.max_position = *upper_limit_stiffness;
 
-    const joint_limits_interface::PositionJointSaturationHandle sat_handle_stiffness(joint_handle_stiffness, limits_stiffness);
+    const joint_limits_interface::PositionJointSaturationHandle sat_handle_stiffness(joint_handle_stiffness, stiffness_limits);
     sj_sat_interface_.registerHandle(sat_handle_stiffness);
+
+    joint_limits_interface::JointLimits damping_limits;
+    damping_limits.has_position_limits = true;
+    damping_limits.min_position = *lower_limit_damping;
+    damping_limits.max_position = *upper_limit_damping;
+
+    const joint_limits_interface::PositionJointSaturationHandle sat_handle_damping(joint_handle_damping, damping_limits);
+    dj_sat_interface_.registerHandle(sat_handle_damping);
   }
 
   void LWRHW::enforceLimits(ros::Duration period)
@@ -276,9 +295,7 @@ namespace lwr_hw
     pj_sat_interface_.enforceLimits(period);
     pj_limits_interface_.enforceLimits(period);
     sj_sat_interface_.enforceLimits(period);
-    sj_limits_interface_.enforceLimits(period);
     dj_sat_interface_.enforceLimits(period);
-    dj_limits_interface_.enforceLimits(period);
   }
 
   // Get Transmissions from the URDF
@@ -365,7 +382,7 @@ namespace lwr_hw
 
   bool LWRHW::prepareSwitch(const std::list<hardware_interface::ControllerInfo> &start_list, const std::list<hardware_interface::ControllerInfo> &stop_list)
   {
-    std::vector<ControlStrategy> desired_strategies;
+    std::set<ControlStrategy> desired_strategies;
     
     for ( std::list<hardware_interface::ControllerInfo>::const_iterator it = start_list.begin(); it != start_list.end(); ++it )
     {
@@ -383,13 +400,25 @@ namespace lwr_hw
         {
           // Debug
           // std::cout << "One controller wants to work on hardware_interface::PositionJointInterface" << std::endl;
-          desired_strategies.push_back( JOINT_POSITION );
+          desired_strategies.insert( JOINT_POSITION );
         }
         else if( res_it->hardware_interface.compare( std::string("hardware_interface::EffortJointInterface") ) == 0 )
         {
           // Debug
           // std::cout << "One controller wants to work on hardware_interface::EffortJointInterface" << std::endl;
-          desired_strategies.push_back( JOINT_IMPEDANCE );
+          desired_strategies.insert( JOINT_EFFORT );
+        }
+        else if( res_it->hardware_interface.compare( std::string("hardware_interface::StiffnessJointInterface") ) == 0 )
+        {
+          // Debug
+          // std::cout << "One controller wants to work on hardware_interface::StiffnessJointInterface" << std::endl;
+          desired_strategies.insert( JOINT_IMPEDANCE );
+        }
+        else if( res_it->hardware_interface.compare( std::string("hardware_interface::DampingJointInterface") ) == 0 )
+        {
+          // Debug
+          // std::cout << "One controller wants to work on hardware_interface::DampingJointInterface" << std::endl;
+          desired_strategies.insert( JOINT_IMPEDANCE );
         }
         else
         {
@@ -399,44 +428,41 @@ namespace lwr_hw
       }
     }
 
-    if( desired_strategies.size() > 1 )
+    ControlStrategy desired_strategy;
+
+    if( desired_strategies.size() == 1 )
     {
-      std::cout << "OOPS! Currently we are using the JointCommandInterface to switch mode, this is not strictly correct. " 
-                << "This is temporary until a joint_mode_controller is available (so you can have different interfaces available in different modes)"
-                << "Having said this, we do not support more than one controller that ones to act on any given JointCommandInterface"
-                << "and we can't switch"
-                << std::endl;
-      return false;
+      desired_strategy = *(desired_strategies.begin());
+      if( desired_strategy == JOINT_IMPEDANCE )
+      {
+        ROS_ERROR( "Controlling the joint impedance without controlling the target position is not supported." );
+        return false;
+      }
     }
+    else if( desired_strategies.size() > 1 )
+    {
+      if( desired_strategies.find( JOINT_EFFORT ) != desired_strategies.end() )
+      {
+        ROS_ERROR( "Effort interface can not be combined with position, stiffness or damping." );
+        return false;
+      }
+
+      // else desired strategies = {JOINT_POSITION,JOINT_IMPEDANCE}
+      desired_strategy = JOINT_IMPEDANCE;
+    }
+    else // desired_strategies.size() == 0
+    {
+      ROS_WARN( "No interface required by controller. Hope nothing bad happens..." );
+      desired_strategy = getControlStrategy();
+    }
+
+    next_strategy_ = desired_strategy;
 
     return true;
   }
 
   void LWRHW::doSwitch(const std::list<hardware_interface::ControllerInfo> &start_list, const std::list<hardware_interface::ControllerInfo> &stop_list)
   {
-    // at this point, we now that there is only one controller that ones to command joints
-    ControlStrategy desired_strategy = JOINT_POSITION; // default
-
-    // If any of the controllers in the start list works on a velocity interface, the switch can't be done.
-    for ( std::list<hardware_interface::ControllerInfo>::const_iterator it = start_list.begin(); it != start_list.end(); ++it )
-    {
-      for( std::vector<hardware_interface::InterfaceResources>::const_iterator res_it = it->claimed_resources.begin(); res_it != it->claimed_resources.end(); ++res_it )
-      {
-        if( res_it->hardware_interface.compare( std::string("hardware_interface::PositionJointInterface") ) == 0 )
-        {
-          std::cout << "Request to switch to hardware_interface::PositionJointInterface (JOINT_POSITION)" << std::endl;
-          desired_strategy = JOINT_POSITION;
-          break;
-        }
-        else if( res_it->hardware_interface.compare( std::string("hardware_interface::EffortJointInterface") ) == 0 )
-        {
-          std::cout << "Request to switch to hardware_interface::EffortJointInterface (JOINT_IMPEDANCE)" << std::endl;
-          desired_strategy = JOINT_IMPEDANCE;
-          break;
-        }
-      }
-    }
-
     for (int j = 0; j < n_joints_; ++j)
     {
       ///semantic Zero
@@ -452,15 +478,17 @@ namespace lwr_hw
       ///reset joint_limit_interfaces
       pj_sat_interface_.reset();
       pj_limits_interface_.reset();
+      sj_sat_interface_.reset();
+      dj_sat_interface_.reset();
     }
 
-    if(desired_strategy == getControlStrategy())
+    if(next_strategy_ == getControlStrategy())
     {
       std::cout << "The ControlStrategy didn't changed, it is already: " << getControlStrategy() << std::endl;
     }
     else
     {
-      setControlStrategy(desired_strategy);
+      setControlStrategy(next_strategy_);
       std::cout << "The ControlStrategy changed to: " << getControlStrategy() << std::endl;
     }
   }

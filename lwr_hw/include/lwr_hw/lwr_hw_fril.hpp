@@ -137,87 +137,33 @@ public:
     return;
   }
 
-  void doSwitch(const std::list<hardware_interface::ControllerInfo> &start_list, const std::list<hardware_interface::ControllerInfo> &stop_list)
+  void setControlStrategy(ControlStrategy strategy)
   {
-
-    ResultValue	=	device_->StopRobot();
+    ResultValue = device_->StopRobot();
     if (ResultValue != EOK)
     {
         std::cout << "An error occurred during stopping the robot, couldn't switch mode...\n" << std::endl;
         return;
     }
-
-    // at this point, we now that there is only one controller that ones to command joints
-    ControlStrategy desired_strategy = JOINT_POSITION; // default
-
-    // If any of the controllers in the start list works on a velocity interface, the switch can't be done.
-    for ( std::list<hardware_interface::ControllerInfo>::const_iterator it = start_list.begin(); it != start_list.end(); ++it )
+    if( strategy == JOINT_POSITION )
     {
-      for( std::vector<hardware_interface::InterfaceResources>::const_iterator res_it = it->claimed_resources.begin(); res_it != it->claimed_resources.end(); ++res_it )
+      ResultValue = device_->StartRobot( FRI_CONTROL_POSITION );
+      if (ResultValue != EOK)
       {
-        if( res_it->hardware_interface.compare( std::string("hardware_interface::PositionJointInterface") ) == 0 )
-        {
-          std::cout << "Request to switch to hardware_interface::PositionJointInterface (JOINT_POSITION)" << std::endl;
-          desired_strategy = JOINT_POSITION;
-          break;
-        }
-        else if( res_it->hardware_interface.compare( std::string("hardware_interface::EffortJointInterface") ) == 0 )
-        {
-          std::cout << "Request to switch to hardware_interface::EffortJointInterface (JOINT_IMPEDANCE)" << std::endl;
-          desired_strategy = JOINT_IMPEDANCE;
-          break;
-        }
+        std::cout << "An error occurred during starting the robot, couldn't switch to JOINT_POSITION...\n" << std::endl;
+        return;
       }
     }
-
-    for (int j = 0; j < n_joints_; ++j)
+    else if( strategy >= JOINT_IMPEDANCE )
     {
-      ///semantic Zero
-      joint_position_command_[j] = joint_position_[j];
-      joint_effort_command_[j] = 0.0;
-
-      ///call setCommand once so that the JointLimitsInterface receive the correct value on their getCommand()!
-      try{  position_interface_.getHandle(joint_names_[j]).setCommand(joint_position_command_[j]);  }
-      catch(const hardware_interface::HardwareInterfaceException&){}
-      try{  effort_interface_.getHandle(joint_names_[j]).setCommand(joint_effort_command_[j]);  }
-      catch(const hardware_interface::HardwareInterfaceException&){}
-
-      ///reset joint_limit_interfaces
-      pj_sat_interface_.reset();
-      pj_limits_interface_.reset();
-    }
-
-    if(desired_strategy == getControlStrategy())
-    {
-      std::cout << "The ControlStrategy didn't changed, it is already: " << getControlStrategy() << std::endl;
-    }
-    else
-    {
-      switch( desired_strategy )
+      ResultValue = device_->StartRobot( FRI_CONTROL_JNT_IMP );
+      if (ResultValue != EOK)
       {
-        case JOINT_POSITION:
-          ResultValue = device_->StartRobot( FRI_CONTROL_POSITION );
-          if (ResultValue != EOK)
-          {
-            std::cout << "An error occurred during starting the robot, couldn't switch to JOINT_POSITION...\n" << std::endl;
-            return;
-          }
-          break;
-         case JOINT_IMPEDANCE:
-          ResultValue = device_->StartRobot( FRI_CONTROL_JNT_IMP );
-          if (ResultValue != EOK)
-          {
-            std::cout << "An error occurred during starting the robot, couldn't switch to JOINT_IMPEDANCE...\n" << std::endl;
-            return;
-          }
-          break;
+        std::cout << "An error occurred during starting the robot, couldn't switch to JOINT_IMPEDANCE...\n" << std::endl;
+        return;
       }
-
-      // if sucess during the switch in FRI, set the ROS strategy
-      setControlStrategy(desired_strategy);
-
-      std::cout << "The ControlStrategy changed to: " << getControlStrategy() << std::endl;
     }
+    current_strategy_ = strategy;
   }
 
 private:

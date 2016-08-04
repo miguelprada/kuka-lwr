@@ -74,6 +74,7 @@ public:
       joint_effort_[j] = device_->getMsrJntTrq()[j];
       joint_velocity_[j] = filters::exponentialSmoothing((joint_position_[j]-joint_position_prev_[j])/period.toSec(), joint_velocity_[j], 0.2);
       joint_stiffness_[j] = joint_stiffness_command_[j];
+      joint_damping_[j] = joint_damping_command_[j];
     }
     return;
   }
@@ -136,67 +137,18 @@ public:
     return;
   }
 
-  void doSwitch(const std::list<hardware_interface::ControllerInfo> &start_list, const std::list<hardware_interface::ControllerInfo> &stop_list)
+  void setControlStrategy(ControlStrategy strategy)
   {
-    // at this point, we now that there is only one controller that ones to command joints
-    ControlStrategy desired_strategy = JOINT_POSITION; // default
+    stopFRI();
 
-    // If any of the controllers in the start list works on a velocity interface, the switch can't be done.
-    for ( std::list<hardware_interface::ControllerInfo>::const_iterator it = start_list.begin(); it != start_list.end(); ++it )
-    {
-      for( std::vector<hardware_interface::InterfaceResources>::const_iterator res_it = it->claimed_resources.begin(); res_it != it->claimed_resources.end(); ++res_it )
-      {
-        if( res_it->hardware_interface.compare( std::string("hardware_interface::PositionJointInterface") ) == 0 )
-        {
-          std::cout << "Request to switch to hardware_interface::PositionJointInterface (JOINT_POSITION)" << std::endl;
-          desired_strategy = JOINT_POSITION;
-          break;
-        }
-        else if( res_it->hardware_interface.compare( std::string("hardware_interface::EffortJointInterface") ) == 0 )
-        {
-          std::cout << "Request to switch to hardware_interface::EffortJointInterface (JOINT_EFFORT)" << std::endl;
-          desired_strategy = JOINT_EFFORT;
-          break;
-        }
-      }
-    }
+    // send to KRL the new strategy
+    if( strategy == JOINT_POSITION )
+      device_->setToKRLInt(0, JOINT_POSITION);
+    else if( strategy >= JOINT_IMPEDANCE)
+      device_->setToKRLInt(0, JOINT_IMPEDANCE);
 
-    for (int j = 0; j < n_joints_; ++j)
-    {
-      ///semantic Zero
-      joint_position_command_[j] = joint_position_[j];
-      joint_effort_command_[j] = 0.0;
-
-      ///call setCommand once so that the JointLimitsInterface receive the correct value on their getCommand()!
-      try{  position_interface_.getHandle(joint_names_[j]).setCommand(joint_position_command_[j]);  }
-      catch(const hardware_interface::HardwareInterfaceException&){}
-      try{  effort_interface_.getHandle(joint_names_[j]).setCommand(joint_effort_command_[j]);  }
-      catch(const hardware_interface::HardwareInterfaceException&){}
-
-      ///reset joint_limit_interfaces
-      pj_sat_interface_.reset();
-      pj_limits_interface_.reset();
-    }
-
-    if(desired_strategy == getControlStrategy())
-    {
-      std::cout << "The ControlStrategy didn't changed, it is already: " << getControlStrategy() << std::endl;
-    }
-    else
-    {
-      stopFRI();
-
-      // send to KRL the new strategy
-      if( desired_strategy == JOINT_POSITION )
-        device_->setToKRLInt(0, JOINT_POSITION);
-      else if( desired_strategy >= JOINT_IMPEDANCE)
-        device_->setToKRLInt(0, JOINT_IMPEDANCE);
-
-      startFRI();
-
-      setControlStrategy(desired_strategy);
-      std::cout << "The ControlStrategy changed to: " << getControlStrategy() << std::endl;
-    }
+    startFRI();
+    current_strategy_ = strategy;
   }
 
 private:
