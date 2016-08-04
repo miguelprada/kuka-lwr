@@ -363,7 +363,7 @@ namespace lwr_hw
     return true;
   }
 
-  bool LWRHW::canSwitch(const std::list<hardware_interface::ControllerInfo> &start_list, const std::list<hardware_interface::ControllerInfo> &stop_list) const
+  bool LWRHW::prepareSwitch(const std::list<hardware_interface::ControllerInfo> &start_list, const std::list<hardware_interface::ControllerInfo> &stop_list)
   {
     std::vector<ControlStrategy> desired_strategies;
     

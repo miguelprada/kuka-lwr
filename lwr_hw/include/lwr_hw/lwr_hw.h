@@ -55,7 +55,7 @@ public:
   // GRAVITY_COMPENSATION -> (not implemented, achieved with low stiffness)
   // __Note__: StiffnessJointInterface + EffortJointInterface = ImpedanceJointInterface
   enum ControlStrategy {JOINT_POSITION = 10, CARTESIAN_IMPEDANCE = 20, JOINT_IMPEDANCE = 30, JOINT_EFFORT = 40, JOINT_STIFFNESS = 50, GRAVITY_COMPENSATION = 90};
-  virtual bool canSwitch(const std::list<hardware_interface::ControllerInfo> &start_list, const std::list<hardware_interface::ControllerInfo> &stop_list) const;
+  virtual bool prepareSwitch(const std::list<hardware_interface::ControllerInfo> &start_list, const std::list<hardware_interface::ControllerInfo> &stop_list);
   virtual void doSwitch(const std::list<hardware_interface::ControllerInfo> &start_list, const std::list<hardware_interface::ControllerInfo> &stop_list);
 
   // This functions must be implemented depending on the outlet (Real FRI/FRIL, Gazebo, etc.)
