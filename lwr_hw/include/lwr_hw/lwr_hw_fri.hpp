@@ -280,6 +280,11 @@ private:
 
 public:
   
+  bool running()
+  {
+    return device_->getFrmKRLInt(1) == 1;
+  }
+
   void stopFRI()
   {
     // wait until FRI enters in command mode

@@ -151,7 +151,12 @@ int main( int argc, char** argv )
     {
       resetControllers = false;
       wasStopHandled = true;
-    }    
+    }
+
+    if( !lwr_robot.running() )
+    {
+      resetControllers = true;
+    }
 
     // update the controllers
     manager.update(now, period, resetControllers);
