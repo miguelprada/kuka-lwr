@@ -47,8 +47,8 @@ public:
     lastQuality_ = FRI_QUALITY_BAD;
     lastCtrlScheme_ = FRI_CTRL_OTHER;
 
-    std::cout << "Opening FRI Version " 
-      << FRI_MAJOR_VERSION << "." << FRI_SUB_VERSION << "." <<FRI_DATAGRAM_ID_CMD << "." <<FRI_DATAGRAM_ID_MSR 
+    std::cout << "Opening FRI Version "
+      << FRI_MAJOR_VERSION << "." << FRI_SUB_VERSION << "." <<FRI_DATAGRAM_ID_CMD << "." <<FRI_DATAGRAM_ID_MSR
       << " Interface for LWR ROS server" << std::endl;
 
     std::cout << "Checking if the robot is Stopped..." << std::endl;
@@ -89,6 +89,7 @@ public:
         cart_stiff_[j] = cart_stiff_command_[j];
         cart_damp_[j] = cart_damp_command_[j];
         cart_wrench_[j] = cart_wrench_command_[j];
+      estimated_external_force_torque_[j] = device_->getMsrBuf().data.estExtTcpFT[j];
     }
     return;
   }
@@ -143,7 +144,7 @@ public:
         }
         {
           std::lock_guard<std::mutex> lock(device_mutex_);
-          device_->doJntImpedanceControl(newJntPosition, newJntStiff, newJntDamp, newJntAddTorque, false);          
+          device_->doJntImpedanceControl(newJntPosition, newJntStiff, newJntDamp, newJntAddTorque, false);
         }
         break;
 
@@ -156,7 +157,7 @@ public:
         // mirror the position
         {
           std::lock_guard<std::mutex> lock(device_mutex_);
-          device_->doJntImpedanceControl(device_->getMsrMsrJntPosition(), newJntStiff, NULL, newJntAddTorque, false);          
+          device_->doJntImpedanceControl(device_->getMsrMsrJntPosition(), newJntStiff, NULL, newJntAddTorque, false);
         }
         break;
 
@@ -315,7 +316,7 @@ private:
   }
 
 public:
-  
+
   bool running()
   {
     return device_->getFrmKRLInt(1) == 1;

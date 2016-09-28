@@ -60,6 +60,8 @@ namespace lwr_hw
     cart_damp_command_.resize(6);
     cart_wrench_command_.resize(6);
 
+    estimated_external_force_torque_.resize(6);
+
     joint_lower_limits_.resize(n_joints_);
     joint_upper_limits_.resize(n_joints_);
     joint_lower_limits_stiffness_.resize(n_joints_);
@@ -142,14 +144,14 @@ namespace lwr_hw
     return;
   }
 
-  void LWRHW::registerInterfaces(const urdf::Model *const urdf_model, 
+  void LWRHW::registerInterfaces(const urdf::Model *const urdf_model,
                      std::vector<transmission_interface::TransmissionInfo> transmissions)
   {
 
     // Check that this transmission has one joint
     if( transmissions.empty() )
     {
-      std::cout << "lwr_hw: " << "There are no transmission in this robot, all are non-driven joints? " 
+      std::cout << "lwr_hw: " << "There are no transmission in this robot, all are non-driven joints? "
         << std::endl;
       return;
     }
@@ -213,18 +215,18 @@ namespace lwr_hw
                                                                    &joint_stiffness_[j], &joint_stiffness_[j], &joint_stiffness_[j]),
                                                        &joint_stiffness_command_[j]);
       position_interface_.registerHandle(joint_handle_stiffness);
-   
+
      // velocity command handle, recall it is fake, there is no actual velocity interface
       hardware_interface::JointHandle joint_handle_velocity;
       joint_handle_velocity = hardware_interface::JointHandle(state_interface_.getHandle(joint_names_[j]),
           &joint_velocity_command_[j]);
 
-      registerJointLimits(joint_names_[j], 
-                          joint_handle_effort, 
+      registerJointLimits(joint_names_[j],
+                          joint_handle_effort,
                           joint_handle_position,
                           joint_handle_velocity,
                           joint_handle_stiffness,
-                          urdf_model, 
+                          urdf_model,
                           &joint_lower_limits_[j], &joint_upper_limits_[j],
                           &joint_lower_limits_stiffness_[j],
                           &joint_upper_limits_stiffness_[j],
@@ -264,6 +266,9 @@ namespace lwr_hw
                                                        &cart_wrench_command_[j]);
       position_cart_interface_.registerHandle(cart_wrench_handle);
     }
+    hardware_interface::ForceTorqueSensorHandle estimated_external_force_torque_handle;
+    estimated_external_force_torque_handle = hardware_interface::ForceTorqueSensorHandle( "estimated_external", urdf_model->getRoot()->name, &estimated_external_force_torque_[0], &estimated_external_force_torque_[3] );
+    estimated_external_force_torque_interface_.registerHandle(estimated_external_force_torque_handle);
 
     // Register interfaces
     registerInterface(&state_interface_);
@@ -271,6 +276,7 @@ namespace lwr_hw
     registerInterface(&position_interface_);
     registerInterface(&cart_interface_);
     registerInterface(&position_cart_interface_);
+    registerInterface(&estimated_external_force_torque_interface_);
   }
 
   // Register the limits of the joint specified by joint_name and\ joint_handle. The limits are
@@ -282,7 +288,7 @@ namespace lwr_hw
                            const hardware_interface::JointHandle& joint_handle_velocity,
                            const hardware_interface::JointHandle& joint_handle_stiffness,
                            const urdf::Model *const urdf_model,
-                           double *const lower_limit, double *const upper_limit, 
+                           double *const lower_limit, double *const upper_limit,
                            double *const lower_limit_stiffness, double *const upper_limit_stiffness,
                            double *const effort_limit)
   {
@@ -414,10 +420,10 @@ namespace lwr_hw
         return false;
     }
 
-    std::cout << "LWR kinematic successfully parsed with " 
-              << kdl_tree.getNrOfJoints() 
-              << " joints, and " 
-              << kdl_tree.getNrOfJoints() 
+    std::cout << "LWR kinematic successfully parsed with "
+              << kdl_tree.getNrOfJoints()
+              << " joints, and "
+              << kdl_tree.getNrOfJoints()
               << " segments." << std::endl;
 
     // Get the info from parameters
@@ -425,7 +431,7 @@ namespace lwr_hw
     ros::param::get(std::string("/") + robot_namespace_ + std::string("/root"), root_name);
     if( root_name.empty() )
       root_name = kdl_tree.getRootSegment()->first; // default
-    
+
     std::string tip_name;
     ros::param::get(std::string("/") + robot_namespace_ + std::string("/tip"), tip_name);
     if( tip_name.empty() )
@@ -458,7 +464,7 @@ namespace lwr_hw
   bool LWRHW::canSwitch(const std::list<hardware_interface::ControllerInfo> &start_list, const std::list<hardware_interface::ControllerInfo> &stop_list) const
   {
     int counter = 0;
-    
+
     for ( std::list<hardware_interface::ControllerInfo>::const_iterator it = start_list.begin(); it != start_list.end(); ++it )
     {
       // If any of the controllers in the start list works on a velocity interface, the switch can't be done.
@@ -496,7 +502,7 @@ namespace lwr_hw
 
     if( counter > 1 )
     {
-      std::cout << "OOPS! Currently we are using the JointCommandInterface to switch mode, this is not strictly correct. " 
+      std::cout << "OOPS! Currently we are using the JointCommandInterface to switch mode, this is not strictly correct. "
                 << "This is temporary until a joint_mode_controller is available (so you can have different interfaces available in different modes)"
                 << "Having said this, we do not support more than one controller that ones to act on any given JointCommandInterface"
                 << "and we can't switch"
@@ -563,6 +569,6 @@ namespace lwr_hw
     }
   }
 
-  
-  
+
+
 }

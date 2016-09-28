@@ -11,6 +11,7 @@
 // ROS controls
 #include <hardware_interface/robot_hw.h>
 #include <cartesian_hardware_interface/cartesian_command_interface.h>
+#include <hardware_interface/force_torque_sensor_interface.h>
 #include <transmission_interface/transmission_info.h>
 #include <transmission_interface/transmission_parser.h>
 #include <joint_limits_interface/joint_limits.h>
@@ -74,6 +75,7 @@ public:
   hardware_interface::PositionCartesianInterface position_cart_interface_;
   // hardware_interface::StiffnessJointInterface stiffness_interface_; // ToDo
   // hardware_interface::ImpedanceointInterface impedance_interface_; // ToDo
+  hardware_interface::ForceTorqueSensorInterface estimated_external_force_torque_interface_;
 
   ControlStrategy current_strategy_;
 
@@ -99,7 +101,7 @@ public:
   std::vector<std::string> cart_6_names_;
 
   // limits
-  std::vector<double> 
+  std::vector<double>
   joint_lower_limits_,
   joint_upper_limits_,
   joint_effort_limits_ ,
@@ -130,6 +132,9 @@ public:
   cart_damp_command_,
   cart_wrench_command_;
 
+  // force/torque sensor readings
+  std::vector<double> estimated_external_force_torque_;
+
   // NOTE:
   // joint_velocity_command is not really to command the kuka arm in velocity,
   // since it doesn't have an interface for that
@@ -155,7 +160,7 @@ private:
   bool parseTransmissionsFromURDF(const std::string& urdf_string);
 
   // Register all interfaces using
-  void registerInterfaces(const urdf::Model *const urdf_model, 
+  void registerInterfaces(const urdf::Model *const urdf_model,
                    std::vector<transmission_interface::TransmissionInfo> transmissions);
 
   // Initialize all KDL members
