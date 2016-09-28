@@ -80,6 +80,10 @@ public:
       joint_velocity_[j] = filters::exponentialSmoothing((joint_position_[j]-joint_position_prev_[j])/period.toSec(), joint_velocity_[j], 0.2);
       joint_stiffness_[j] = joint_stiffness_command_[j];
     }
+    for (int j = 0; j < 6; j++)
+    {
+      estimated_external_force_torque_[j] = device_->getMsrBuf().data.estExtTcpFT[j];
+    }
     return;
   }
 
