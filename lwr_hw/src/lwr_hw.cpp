@@ -34,6 +34,8 @@ namespace lwr_hw
     joint_stiffness_command_.resize(n_joints_);
     joint_damping_command_.resize(n_joints_);
 
+    estimated_external_force_torque_.resize(6);
+
     joint_lower_limits_.resize(n_joints_);
     joint_upper_limits_.resize(n_joints_);
     joint_lower_limits_stiffness_.resize(n_joints_);
@@ -175,10 +177,15 @@ namespace lwr_hw
                           &joint_effort_limits_[j]);
     }
 
+    hardware_interface::ForceTorqueSensorHandle estimated_external_force_torque_handle;
+    estimated_external_force_torque_handle = hardware_interface::ForceTorqueSensorHandle( "estimated_external", urdf_model->getRoot()->name, &estimated_external_force_torque_[0], &estimated_external_force_torque_[3] );
+    estimated_external_force_torque_interface_.registerHandle(estimated_external_force_torque_handle);
+
     // Register interfaces
     registerInterface(&state_interface_);
     registerInterface(&effort_interface_);
     registerInterface(&position_interface_);
+    registerInterface(&estimated_external_force_torque_interface_);
   }
 
   // Register the limits of the joint specified by joint_name and\ joint_handle. The limits are
