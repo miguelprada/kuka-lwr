@@ -1,11 +1,14 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
 
-	<xacro:macro name="kuka_lwr_gazebo" params="name">
+	<xacro:macro name="kuka_lwr_gazebo" params="name control_period:=0">
 
 		<gazebo>
 			<plugin name="${name}_lwr_hw_sim" filename="liblwr_hw_gazebo_plugin.so">
 				<robotNamespace>${name}</robotNamespace>
+				<xacro:if value="${control_period > 0}">
+					<controlPeriod>${control_period}</controlPeriod>
+				</xacro:if>
 			</plugin>
 		</gazebo>
 

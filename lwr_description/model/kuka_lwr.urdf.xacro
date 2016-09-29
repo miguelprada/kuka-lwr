@@ -23,7 +23,7 @@
 	<xacro:property name="rate_stiffness" value="20000"/> <!-- reflex to stiffness -->
 
 	<!-- URDF model /-->
-	<xacro:macro name="kuka_lwr" params="parent name *origin">
+	<xacro:macro name="kuka_lwr" params="parent name gazebo_control_period:=0 *origin">
 
 		<!-- First (shoulder) element of the arm. Fixed to its parent. -->
 		<joint name="${parent}_${name}_base_joint" type="fixed">
@@ -401,7 +401,7 @@
 			</collision>
 		</link>
 
-		<xacro:kuka_lwr_gazebo name="${name}"/>
+		<xacro:kuka_lwr_gazebo name="${name}" control_period="${gazebo_control_period}"/>
 		<xacro:kuka_lwr_transmission name="${name}"/>
 
 	</xacro:macro>
