@@ -109,7 +109,7 @@ int main( int argc, char** argv )
   //the controller manager
   controller_manager::ControllerManager manager(&lwr_robot, lwr_nh);
 
-  // run as fast as possible
+  // run in sync with FRI
   while( !g_quit )
   {
     // get the time / period

@@ -9,8 +9,6 @@
 #include <cstdlib>
 #include <math.h>
 #include <limits.h>
-#include <thread>
-#include <mutex>
 #include "fri/friudp.h"
 #include "fri/friremote.h"
 
@@ -25,7 +23,7 @@ class LWRHWFRI : public LWRHW
 public:
 
   LWRHWFRI() : LWRHW() {}
-  ~LWRHWFRI() { stopKRCComm_ = true; KRCCommThread_.get()->join();}
+  ~LWRHWFRI() {}
 
   void setPort(int port){port_ = port; port_set_ = true;};
   void setIP(std::string hintToRemoteHost){hintToRemoteHost_ = hintToRemoteHost; ip_set_ = true;};
@@ -55,7 +53,6 @@ public:
     {
       std::cout << "Please, start the KRL script now." << std::endl;
     }
-    KRCCommThread_.reset( new std::thread( &LWRHWFRI::KRCCommThreadCallback,this ) );
 
     startFRI();
 
@@ -67,7 +64,6 @@ public:
 
   void read(ros::Time time, ros::Duration period)
   {
-    std::lock_guard<std::mutex> lock(device_mutex_);
     for (int j = 0; j < n_joints_; j++)
     {
       joint_position_prev_[j] = joint_position_[j];
@@ -100,10 +96,7 @@ public:
         {
           newJntPosition[j] = joint_position_command_[j];
         }
-        {
-          std::lock_guard<std::mutex> lock(device_mutex_);
-          device_->doPositionControl(newJntPosition, false);
-        }
+        device_->doPositionControl(newJntPosition, true);
         break;
 
       case CARTESIAN_IMPEDANCE:
@@ -117,10 +110,7 @@ public:
           newJntStiff[j] = joint_stiffness_command_[j];
           newJntDamp[j] = joint_damping_command_[j];
         }
-        {
-          std::lock_guard<std::mutex> lock(device_mutex_);
-          device_->doJntImpedanceControl(newJntPosition, newJntStiff, newJntDamp, newJntAddTorque, false);          
-        }
+        device_->doJntImpedanceControl(newJntPosition, newJntStiff, newJntDamp, newJntAddTorque, true);          
         break;
 
      case JOINT_EFFORT:
@@ -129,10 +119,7 @@ public:
             newJntAddTorque[j] = joint_effort_command_[j];
         }
         // mirror the position
-        {
-          std::lock_guard<std::mutex> lock(device_mutex_);
-          device_->doJntImpedanceControl(device_->getMsrMsrJntPosition(), NULL, NULL, newJntAddTorque, false);          
-        }
+        device_->doJntImpedanceControl(device_->getMsrMsrJntPosition(), NULL, NULL, newJntAddTorque, true);          
         break;
 
       case JOINT_STIFFNESS:
@@ -141,17 +128,11 @@ public:
           newJntPosition[j] = joint_position_command_[j];
           newJntStiff[j] = joint_stiffness_command_[j];
         }
-        {
-          std::lock_guard<std::mutex> lock(device_mutex_);
-          device_->doJntImpedanceControl(newJntPosition, newJntStiff, NULL, NULL, false);
-        }
+        device_->doJntImpedanceControl(newJntPosition, newJntStiff, NULL, NULL, true);
         break;
 
       case GRAVITY_COMPENSATION:
-        {
-          std::lock_guard<std::mutex> lock(device_mutex_);
-          device_->doJntImpedanceControl(device_->getMsrMsrJntPosition(), NULL, NULL, NULL, false);
-        }
+        device_->doJntImpedanceControl(device_->getMsrMsrJntPosition(), NULL, NULL, NULL, true);
         break;
     }
     return;
@@ -207,12 +188,10 @@ public:
       // send to KRL the new strategy
       if( desired_strategy == JOINT_POSITION )
       {
-        std::lock_guard<std::mutex> lock(device_mutex_);
         device_->setToKRLInt(0, JOINT_POSITION);
       }
       else if( desired_strategy >= JOINT_IMPEDANCE)
       {
-        std::lock_guard<std::mutex> lock(device_mutex_);
         device_->setToKRLInt(0, JOINT_IMPEDANCE);
       }
 
@@ -233,37 +212,16 @@ private:
 
   // low-level interface
   boost::shared_ptr<friRemote> device_;
-  std::mutex device_mutex_;
 
   // FRI values
   FRI_QUALITY lastQuality_;
   FRI_CTRL lastCtrlScheme_;
-
-  boost::shared_ptr<std::thread> KRCCommThread_;
-  bool stopKRCComm_ = false;
-  void KRCCommThreadCallback()
-  {
-    while(!stopKRCComm_)
-    {
-      {
-        std::lock_guard<std::mutex> lock(device_mutex_);
-        device_->doSendData();
-      }
-      usleep(3000);
-      {
-        std::lock_guard<std::mutex> lock(device_mutex_);
-        device_->doReceiveData();
-      }
-    }
-    return;
-  }
 
   void startFRI()
   {
     // wait until FRI enters in command mode
     // std::cout << "Waiting for good communication quality..." << std::endl;
     // while( device_->getQuality() != FRI_QUALITY_OK ){};
-    std::lock_guard<std::mutex> lock(device_mutex_);
     device_->setToKRLInt(1, 1);
 
     // std::cout << "Waiting for command mode..." << std::endl;
@@ -286,19 +244,13 @@ public:
   void stopFRI()
   {
     // wait until FRI enters in command mode
-    {
-      std::lock_guard<std::mutex> lock(device_mutex_);
-      device_->setToKRLInt(1, 0);
-    }
+    device_->setToKRLInt(1, 0);
     std::cout << "Waiting for monitor mode..." << std::endl;
     bool stopped = false;
     while ( !stopped )
     {
-      {
-        std::lock_guard<std::mutex> lock(device_mutex_);
-        stopped = device_->getFrmKRLInt(1) == 0;
-      }
-      usleep(100000);
+      device_->doDataExchange();
+      stopped = device_->getFrmKRLInt(1) == 0;
     }
     // {
       // std::cout << "device_->getState(): " << device_->getState() << std::endl;
