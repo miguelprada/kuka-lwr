@@ -66,8 +66,6 @@ public:
 
   void write(ros::Time time, ros::Duration period)
   {
-    enforceLimits(period);
-
     switch (getControlStrategy())
     {
 

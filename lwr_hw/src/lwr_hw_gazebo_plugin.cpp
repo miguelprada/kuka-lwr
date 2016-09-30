@@ -152,6 +152,9 @@ public:
 
       // Compute the controller commands
       controller_manager_->update(sim_time_ros, sim_period);
+
+      // Enforce joint limits
+      robot_hw_sim_->enforceLimits(sim_period);
     }
 
     // Update the gazebo model with the result of the controller
