@@ -161,9 +161,6 @@ int main( int argc, char** argv )
     lwr_robot.write(now, period);
   }
 
-  std::cerr<<"Stopping spinner..."<<std::endl;
-  spinner.stop();
-
   std::cerr<<"Stopping LWR..."<<std::endl;
   lwr_robot.stopFRI();
 
