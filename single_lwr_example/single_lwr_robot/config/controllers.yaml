@@ -27,6 +27,10 @@ lwr:
       - lwr_a5_joint_stiffness
       - lwr_a6_joint_stiffness
 
+  lwr_controller_pose_publisher:
+    type: lwr_controllers/LwrControllerPosePublisher
+    robot_name: lwr
+
 ## OTHER CUSTOM CONTROLLERS LEFT HERE AS EXAMPLES
   arm_state_controller: 
     type: arm_state_controller/ArmStateController
@@ -50,7 +54,7 @@ lwr:
   # Inverse Dynamics Controllers
   inverse_dynamics_controller:
     type: lwr_controllers/InverseDynamicsController
-    root_name: lwr_base_link
+    root_name: lwr_base_link  
     tip_name: lwr_7_link
 
   # Computed Torque Controllers
