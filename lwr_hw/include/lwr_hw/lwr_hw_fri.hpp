@@ -89,10 +89,14 @@ public:
         cart_damp_[j] = cart_damp_command_[j];
         cart_wrench_[j] = cart_wrench_command_[j];
     }
-    for(int i = 0; i < 6; ++i)
-    {
-      estimated_tcp_force_torque_[i] = device_->getMsrEstExtTcpFT()[i];
-    }
+    // FRI provides the estimated force applied by the robot TCP expressed in the base frame, rotation and negation is required
+    float* estExtTcpFT = device_->getMsrEstExtTcpFT();
+    estimated_tcp_force_torque_[0] = -( estExtTcpFT[0]*cart_pos_[0] + estExtTcpFT[1]*cart_pos_[1] + estExtTcpFT[2]*cart_pos_[2] );
+    estimated_tcp_force_torque_[1] = -( estExtTcpFT[0]*cart_pos_[4] + estExtTcpFT[1]*cart_pos_[5] + estExtTcpFT[2]*cart_pos_[6] );
+    estimated_tcp_force_torque_[2] = -( estExtTcpFT[0]*cart_pos_[8] + estExtTcpFT[1]*cart_pos_[9] + estExtTcpFT[2]*cart_pos_[10] );
+    estimated_tcp_force_torque_[3] = -( estExtTcpFT[3]*cart_pos_[0] + estExtTcpFT[4]*cart_pos_[1] + estExtTcpFT[5]*cart_pos_[2] );
+    estimated_tcp_force_torque_[4] = -( estExtTcpFT[3]*cart_pos_[4] + estExtTcpFT[4]*cart_pos_[5] + estExtTcpFT[5]*cart_pos_[6] );
+    estimated_tcp_force_torque_[5] = -( estExtTcpFT[3]*cart_pos_[8] + estExtTcpFT[4]*cart_pos_[9] + estExtTcpFT[5]*cart_pos_[10] );
     return;
   }
 
@@ -265,7 +269,7 @@ private:
   }
 
 public:
-  
+
   void stopFRI()
   {
     // wait until FRI enters in command mode
