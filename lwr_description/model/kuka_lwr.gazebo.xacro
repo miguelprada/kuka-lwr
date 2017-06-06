@@ -4,9 +4,7 @@
 	<xacro:macro name="kuka_lwr_gazebo" params="name">
 
 		<gazebo>
-			<plugin name="${name}_lwr_hw_sim" filename="liblwr_hw_gazebo_plugin.so">
-				<robotNamespace>${name}</robotNamespace>
-			</plugin>
+			<plugin name="${name}_lwr_hw_sim" filename="libgazebo_ros_control.so"/>
 		</gazebo>
 
 		<gazebo reference="${name}_base_link">
