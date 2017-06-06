@@ -61,6 +61,8 @@ namespace lwr_hw
     cart_damp_command_.resize(6);
     cart_wrench_command_.resize(6);
 
+    estimated_tcp_force_torque_.resize(6);
+
     joint_lower_limits_.resize(n_joints_);
     joint_upper_limits_.resize(n_joints_);
     joint_lower_limits_stiffness_.resize(n_joints_);
@@ -287,12 +289,16 @@ namespace lwr_hw
       position_cart_interface_.registerHandle(cart_wrench_handle);
     }
 
+    // Force torque sensor interface
+    force_torque_sensor_interface_.registerHandle( hardware_interface::ForceTorqueSensorHandle("estimated", "lwr_7_link", &estimated_tcp_force_torque_[0], &estimated_tcp_force_torque_[3]) );
+
     // Register interfaces
     registerInterface(&state_interface_);
     registerInterface(&effort_interface_);
     registerInterface(&position_interface_);
     registerInterface(&cart_interface_);
     registerInterface(&position_cart_interface_);
+    registerInterface(&force_torque_sensor_interface_);
   }
 
   // Register the limits of the joint specified by joint_name and\ joint_handle. The limits are

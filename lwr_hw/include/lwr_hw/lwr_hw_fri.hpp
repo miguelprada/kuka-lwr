@@ -89,6 +89,10 @@ public:
         cart_damp_[j] = cart_damp_command_[j];
         cart_wrench_[j] = cart_wrench_command_[j];
     }
+    for(int i = 0; i < 6; ++i)
+    {
+      estimated_tcp_force_torque_[i] = device_->getMsrEstExtTcpFT()[i];
+    }
     return;
   }
 

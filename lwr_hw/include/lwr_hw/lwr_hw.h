@@ -10,6 +10,7 @@
 
 // ROS controls
 #include <hardware_interface/robot_hw.h>
+#include <hardware_interface/force_torque_sensor_interface.h>
 #include <cartesian_hardware_interface/cartesian_command_interface.h>
 #include <transmission_interface/transmission_info.h>
 #include <transmission_interface/transmission_parser.h>
@@ -87,6 +88,7 @@ public:
   hardware_interface::PositionJointInterface position_interface_;
   hardware_interface::CartesianStateInterface cart_interface_;
   hardware_interface::PositionCartesianInterface position_cart_interface_;
+  hardware_interface::ForceTorqueSensorInterface force_torque_sensor_interface_;
   // hardware_interface::StiffnessJointInterface stiffness_interface_; // ToDo
   // hardware_interface::ImpedanceointInterface impedance_interface_; // ToDo
 
@@ -145,6 +147,8 @@ public:
   cart_stiff_command_,
   cart_damp_command_,
   cart_wrench_command_;
+
+  std::vector<double> estimated_tcp_force_torque_;
 
   // NOTE:
   // joint_velocity_command is not really to command the kuka arm in velocity,
