@@ -124,15 +124,17 @@ int main( int argc, char** argv )
       now.nsec = ts.tv_nsec;
       period = now - last;
       last = now;
-    } 
+    }
     else
     {
       ROS_FATAL("Failed to poll realtime clock!");
       break;
     }
 
+    ros::Time ros_now = ros::Time::now();
+
     // read the state from the lwr
-    lwr_robot.read(now, period);
+    lwr_robot.read(ros_now, period);
 
     // Compute the controller commands
     bool resetControllers;
@@ -152,13 +154,13 @@ int main( int argc, char** argv )
     {
       resetControllers = false;
       wasStopHandled = true;
-    }    
+    }
 
     // update the controllers
-    manager.update(now, period, resetControllers);
+    manager.update(ros_now, period, resetControllers);
 
     // write the command to the lwr
-    lwr_robot.write(now, period);
+    lwr_robot.write(ros_now, period);
 
     // if there is time left, sleep
     rate.sleep();
